@@ -92,7 +92,8 @@
     <textarea id="text" placeholder="Например: сделай КП на 884.208.004 — 2 шт, клиент Котлостройсервис"></textarea>
 
     <label>Файлы: фото, скан, PDF, Excel</label>
-    <div class="drop" id="drop">Перетащите файлы сюда или нажмите, чтобы выбрать</div>
+    <div class="drop" id="drop">Перетащите файлы сюда или нажмите, чтобы выбрать<br>
+      <span class="hint">либо вставьте картинку из буфера — Cmd+V / Ctrl+V</span></div>
     <input type="file" id="picker" multiple hidden>
     <ul class="files" id="fileList"></ul>
 
@@ -220,12 +221,49 @@ $('picker').onchange = e => addFiles(e.target.files);
 }));
 $('drop').addEventListener('drop', e => addFiles(e.dataTransfer.files));
 function addFiles(list){ queue.push(...list); renderFiles(); }
+
+/* вставка картинки из буфера: Cmd+V / Ctrl+V в любом месте страницы */
+let pasteN = 0;
+document.addEventListener('paste', e => {
+  const imgs = [];
+  for (const it of (e.clipboardData?.items || [])) {
+    if (it.kind === 'file' && it.type.startsWith('image/')) {
+      const f = it.getAsFile();
+      if (f) imgs.push(f);
+    }
+  }
+  if (!imgs.length) return;         // в буфере обычный текст — не мешаем вставке в поле
+  e.preventDefault();
+  for (const f of imgs) {
+    // у картинки из буфера имени нет — даём своё, по времени вставки
+    const ext = (f.type.split('/')[1] || 'png').toLowerCase().replace('jpeg', 'jpg');
+    queue.push(new File([f], `вставка_${stamp()}_${++pasteN}.${ext}`, {type: f.type}));
+  }
+  renderFiles();
+  msg('sendMsg', `Картинка добавлена (${imgs.length}). Нажмите «Загрузить задание».`, 'ok');
+});
+
 function renderFiles(){
   const ul = $('fileList'); ul.innerHTML = '';
   queue.forEach((f,i) => {
     const li = document.createElement('li');
-    li.innerHTML = `<span>${f.name} <span class="hint">(${size(f.size)})</span></span><span class="x">✕</span>`;
-    li.querySelector('.x').onclick = () => { queue.splice(i,1); renderFiles(); };
+    const left = document.createElement('span');
+    left.style.cssText = 'display:flex;align-items:center;gap:8px;min-width:0';
+    if (f.type.startsWith('image/')) {            // миниатюра — видно, что вставилось
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      img.style.cssText = 'width:34px;height:34px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex:none';
+      img.onload = () => URL.revokeObjectURL(img.src);
+      left.appendChild(img);
+    }
+    const nm = document.createElement('span');
+    nm.innerHTML = `${f.name} <span class="hint">(${size(f.size)})</span>`;
+    left.appendChild(nm);
+    li.appendChild(left);
+    const x = document.createElement('span');
+    x.className = 'x'; x.textContent = '✕';
+    x.onclick = () => { queue.splice(i,1); renderFiles(); };
+    li.appendChild(x);
     ul.appendChild(li);
   });
 }
