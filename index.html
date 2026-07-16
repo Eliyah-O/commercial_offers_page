@@ -297,30 +297,42 @@ $('send').onclick = async () => {
 };
 
 /* ---------- результаты ---------- */
+/* Результаты лежат в подпапках вида results/ГГММДДNNN_кто/ — поэтому смотрим
+   всё дерево рекурсивно, а не только верхний уровень (иначе файлов не видно). */
 $('refresh').onclick = async () => {
   msg('resMsg','Загружаю…','info');
   const body = $('resBody'); body.innerHTML = '';
   try{
-    const res = await gh(apiUrl(RESULTS) + `?ref=${encodeURIComponent(cfg.branch)}`);
-    if(!res){
-      body.innerHTML = `<tr><td colspan="3" class="hint">Папки «${RESULTS}» пока нет — результатов ещё не было.</td></tr>`;
-      msg('resMsg','Пусто.','info'); return;
+    const r = await gh(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}` +
+                       `/git/trees/${encodeURIComponent(cfg.branch)}?recursive=1`);
+    if(!r){
+      body.innerHTML = '<tr><td colspan="3" class="hint">Репозиторий или ветка не найдены.</td></tr>';
+      msg('resMsg','Не найдено.','err'); return;
     }
-    let items = await res.json();
-    if(!Array.isArray(items)) items = [items];
-    items = items.filter(i => i.type === 'file').sort((a,b) => b.name.localeCompare(a.name));
+    const j = await r.json();
+    const items = (j.tree || [])
+      .filter(t => t.type === 'blob' && t.path.startsWith(RESULTS + '/'))
+      .map(t => ({ path: t.path, rel: t.path.slice(RESULTS.length + 1), sha: t.sha, size: t.size }))
+      .sort((a,b) => b.rel.localeCompare(a.rel, 'ru'));
     if(!items.length){
       body.innerHTML = '<tr><td colspan="3" class="hint">Результатов пока нет.</td></tr>';
-      msg('resMsg','Пусто.','info'); return;
+      $('resHint').textContent = ''; msg('resMsg','Пусто.','info'); return;
     }
     for(const it of items){
+      const cut = it.rel.lastIndexOf('/');
+      const dir = cut > 0 ? it.rel.slice(0, cut) : '';
+      const name = cut > 0 ? it.rel.slice(cut + 1) : it.rel;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${it.name}</td><td>${size(it.size)}</td>`;
-      const td = document.createElement('td');
+      const td1 = document.createElement('td');
+      td1.innerHTML = (dir ? `<span class="hint">${dir} /</span><br>` : '') + name;
+      tr.appendChild(td1);
+      const td2 = document.createElement('td'); td2.textContent = size(it.size); tr.appendChild(td2);
+      const td3 = document.createElement('td');
       const btn = document.createElement('button');
       btn.className = 'ghost'; btn.textContent = 'Скачать';
-      btn.onclick = () => download(it);
-      td.appendChild(btn); tr.appendChild(td); body.appendChild(tr);
+      btn.onclick = () => download(it, name);
+      td3.appendChild(btn); tr.appendChild(td3);
+      body.appendChild(tr);
     }
     $('resHint').textContent = `файлов: ${items.length}`;
     msg('resMsg','Готово.','ok');
@@ -329,15 +341,16 @@ $('refresh').onclick = async () => {
     msg('resMsg', e.message, 'err');
   }
 };
-async function download(item){
+async function download(item, name){
   try{
-    const r = await gh(item.url);                    // приватный репозиторий: качаем через API
+    // приватный репозиторий: качаем через API по sha (работает и для больших файлов)
+    const r = await gh(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/git/blobs/${item.sha}`);
     const j = await r.json();
     const bin = Uint8Array.from(atob(j.content.replace(/\n/g,'')), c => c.charCodeAt(0));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([bin]));
-    a.download = item.name; a.click();
-    URL.revokeObjectURL(a.href);
+    a.download = name || 'file'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }catch(e){ msg('resMsg', e.message, 'err'); }
 }
 
