@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Просим браузер не кэшировать страницу: GitHub Pages отдаёт max-age=600, из-за чего
      у разных людей подолгу висели РАЗНЫЕ версии и список результатов не совпадал. -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -17,7 +17,9 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
        font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-  header{background:var(--accent);color:#fff;padding:18px 20px}
+  header{background:var(--accent);color:#fff;padding:18px 20px;
+         /* безопасная зона iPhone: иначе заголовок лезет под часы/индикаторы */
+         padding-top:calc(18px + env(safe-area-inset-top))}
   header h1{margin:0;font-size:19px}
   header p{margin:4px 0 0;font-size:13px;opacity:.85}
   main{max-width:1080px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-columns:1fr 1fr}
@@ -26,7 +28,10 @@
   .card h2{margin:0 0 12px;font-size:16px}
   .full{grid-column:1/-1}
   label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
-  input[type=text],input[type=password],textarea,select{
+  /* ВАЖНО: перечислять типы поимённо нельзя — при добавлении нового типа (tel, email…)
+     поле молча выпадает из правила и становится узким (напоролись 25.07.2026).
+     Поэтому — все input, КРОМЕ переключателей и файлового. */
+  input:not([type=radio]):not([type=checkbox]):not([type=file]),textarea,select{
     width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff;
     /* 16px — иначе iOS Safari при фокусе на поле зумит всю страницу */
     font-size:16px}
@@ -55,6 +60,7 @@
   .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eef1f5;color:var(--mut)}
   details{margin-top:10px} summary{cursor:pointer;font-size:13px;color:var(--mut)}
 
+  .only-narrow{display:none}               /* показывается только на телефоне */
   /* ================= ТЕЛЕФОН (адаптация 25.07.2026) =================
      Цели: ничего не уезжает за край, поля и кнопки удобно нажимать пальцем,
      iOS не зумит страницу при фокусе, длинные имена файлов/домены переносятся. */
@@ -87,14 +93,17 @@
     th,td{padding:8px 4px}
     td{word-break:break-word}
     .tag{display:none}                  /* мелкие подписи-плашки на телефоне лишние */
+    .only-wide{display:none} .only-narrow{display:inline}
+    summary .hint{display:none}         /* «— один раз на каждом устройстве» переносилось второй строкой */
+    header p{font-size:12px}
   }
 </style>
 </head>
 <body>
 <header>
   <h1>Расчет коммерческого предложения</h1>
-  <p>Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.
-     <span style="opacity:.6">· версия 5.5 (25.07.2026): адаптация под телефон</span></p>
+  <p><span class="only-wide">Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.</span><span class="only-narrow">Отправьте задание — готовый результат ниже.</span>
+     <span style="opacity:.6">· версия 5.6 (25.07.2026): мобильные правки</span></p>
 </header>
 
 <main>
@@ -178,7 +187,7 @@
       </div>
       <div class="row">
         <div style="flex:1;min-width:160px">
-          <label>На какой НАШ номер позвонил клиент</label>
+          <label>На какой наш номер позвонил клиент</label>
           <input type="tel" inputmode="tel" autocomplete="off" id="cOurPhone" placeholder="+7 …">
           <p class="hint" id="phoneHint" style="margin:4px 0 0"></p>
         </div>
@@ -194,8 +203,9 @@
     <textarea id="text" placeholder="Например: сделай КП на 884.208.004 — 2 шт, клиент Котлостройсервис"></textarea>
 
     <label>Файлы: фото, скан, PDF, Excel</label>
-    <div class="drop" id="drop">Перетащите файлы сюда или нажмите, чтобы выбрать<br>
-      <span class="hint">либо вставьте картинку из буфера — Cmd+V / Ctrl+V</span></div>
+    <div class="drop" id="drop"><span class="only-wide">Перетащите файлы сюда или нажмите, чтобы выбрать<br>
+      <span class="hint">либо вставьте картинку из буфера — Cmd+V / Ctrl+V</span></span><span class="only-narrow">Нажмите, чтобы выбрать фото или файл<br>
+      <span class="hint">камера, галерея или файлы телефона</span></span></div>
     <input type="file" id="picker" multiple hidden>
     <ul class="files" id="fileList"></ul>
 
