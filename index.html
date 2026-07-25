@@ -58,7 +58,7 @@
 <header>
   <h1>Расчет коммерческого предложения</h1>
   <p>Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.
-     <span style="opacity:.6">· версия 4 (16.07.2026)</span></p>
+     <span style="opacity:.6">· версия 5 (25.07.2026): заявки со звонков</span></p>
 </header>
 
 <main>
@@ -94,6 +94,54 @@
   <!-- ---------------- ОТПРАВКА ЗАДАНИЯ ---------------- -->
   <section class="card">
     <h2>1. Отправить задание</h2>
+
+    <label>Откуда заявка</label>
+    <div class="row">
+      <label style="margin:0;color:var(--ink)"><input type="radio" name="src" value="почта" checked> Письмо / текст</label>
+      <label style="margin:0;color:var(--ink)"><input type="radio" name="src" value="звонок"> Звонок / мессенджер</label>
+    </div>
+
+    <div id="callFields" style="display:none">
+      <div class="row">
+        <div style="flex:1;min-width:160px">
+          <label>Имя клиента</label>
+          <input type="text" id="cName" placeholder="Иван Петров">
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label>Компания</label>
+          <input type="text" id="cCompany" placeholder="ООО «…» (если известна)">
+        </div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:160px">
+          <label>Телефон клиента <b style="color:var(--err)">*</b></label>
+          <input type="text" id="cPhone" placeholder="+7 …">
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label>E-mail (если есть)</label>
+          <input type="text" id="cEmail" placeholder="client@mail.ru">
+        </div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:160px">
+          <label>Куда отвечать</label>
+          <select id="cReply" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff">
+            <option value="">— не выбрано —</option>
+            <option>WhatsApp</option>
+            <option>Telegram</option>
+            <option>Перезвонить</option>
+            <option>E-mail</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label>На какой номер позвонили (= сайт-источник)</label>
+          <select id="cSite" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff">
+            <option value="">— не знаю —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <label>Текст задания (можно вставить прямо сюда)</label>
     <textarea id="text" placeholder="Например: сделай КП на 884.208.004 — 2 шт, клиент Котлостройсервис"></textarea>
 
@@ -149,6 +197,31 @@
 const $ = id => document.getElementById(id);
 const TASKS = 'tasks', RESULTS = 'results';
 let queue = [];
+
+/* ---------- сайты и их номера (источник заявки по звонку) ----------
+   ⚠ ЗАПОЛНИТЬ реальными номерами (справочник: память/справочник_сайтов_номеров.csv
+   в проекте Подбор_запчастей). Выбор номера = однозначный сайт-источник. */
+const SITES = [
+  {site:'shop.vitaprom.ru', phone:'УТОЧНИТЬ'},
+  {site:'kotelki.ru',       phone:'УТОЧНИТЬ'},
+  {site:'vitaprom.ru',      phone:'УТОЧНИТЬ'},
+  {site:'advers.ru',        phone:'УТОЧНИТЬ'},
+];
+(function fillSites(){
+  const sel = $('cSite');
+  SITES.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.site;
+    o.textContent = s.phone === 'УТОЧНИТЬ' ? s.site : `${s.phone} — ${s.site}`;
+    sel.appendChild(o);
+  });
+})();
+
+/* переключатель «откуда заявка» */
+document.querySelectorAll('input[name=src]').forEach(r => r.onchange = () => {
+  $('callFields').style.display =
+    document.querySelector('input[name=src]:checked').value === 'звонок' ? 'block' : 'none';
+});
 
 /* ---------- настройки ---------- */
 const cfg = {
@@ -287,17 +360,37 @@ const safe = n => n.replace(/[^\w.\-А-Яа-яЁё ]/g,'_');
 /* ---------- отправка ---------- */
 $('send').onclick = async () => {
   const text = $('text').value.trim();
+  const isCall = document.querySelector('input[name=src]:checked').value === 'звонок';
   if(!text && !queue.length){ msg('sendMsg','Добавьте текст или файлы.','err'); return; }
+  if(isCall && !$('cPhone').value.trim()){
+    msg('sendMsg','Для заявки со звонка ТЕЛЕФОН клиента обязателен.','err'); return;
+  }
   const big = queue.find(f => f.size > 25*1024*1024);
   if(big){ msg('sendMsg', `Файл «${big.name}» больше 25 МБ — GitHub его не примет.`, 'err'); return; }
   $('send').disabled = true;
   try{
     const dir = `${TASKS}/${stamp()}`;
+    let payload = text;
+    if(isCall){
+      // структурированная шапка — Claude парсит её при разборе (канал «з»)
+      const head = [
+        'КАНАЛ: звонок/мессенджер',
+        'Имя: '      + ($('cName').value.trim()    || '—'),
+        'Компания: ' + ($('cCompany').value.trim() || '—'),
+        'Телефон: '  + $('cPhone').value.trim(),
+        'E-mail: '   + ($('cEmail').value.trim()   || '—'),
+        'Куда отвечать: ' + ($('cReply').value     || '—'),
+        'Позвонили на номер (сайт-источник): ' + ($('cSite').value || 'не знаю'),
+        '---'
+      ].join('\n');
+      payload = head + '\n' + text;
+    }
     let n = 0;
-    if(text){ await putFile(`${dir}/задание.txt`, textB64(text), 'Задание: текст'); n++; }
+    if(payload){ await putFile(`${dir}/задание.txt`, textB64(payload), 'Задание: ' + (isCall?'звонок':'текст')); n++; }
     for(const f of queue){ await putFile(`${dir}/${safe(f.name)}`, await b64(f), 'Задание: ' + f.name); n++; }
     msg('sendMsg', `Отправлено (${n} файл(ов)) в ${dir}. Claude заберёт задание при следующей проверке.`, 'ok');
     $('text').value = ''; queue = []; renderFiles();
+    if(isCall){ ['cName','cCompany','cPhone','cEmail'].forEach(id => $(id).value=''); $('cReply').value=''; $('cSite').value=''; }
   }catch(e){ msg('sendMsg', e.message, 'err'); }
   $('send').disabled = false;
 };
