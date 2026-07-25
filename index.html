@@ -28,9 +28,15 @@
   body{margin:0;background:var(--bg);color:var(--ink);
        font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
   header{background:var(--accent);color:#fff;padding:18px 20px;
+         display:flex;align-items:center;gap:14px;
          /* безопасная зона iPhone: иначе заголовок лезет под часы/индикаторы */
          padding-top:calc(18px + env(safe-area-inset-top))}
   header h1{margin:0;font-size:19px}
+  .hgroup{min-width:0}                     /* чтобы длинный текст переносился, а не растягивал шапку */
+  /* Логотип тёмно-синий, шапка тоже — поэтому белая плашка со скруглением: значок читается
+     и выглядит как иконка приложения (25.07.2026). */
+  .logo{width:54px;height:54px;flex:none;border-radius:13px;background:#fff;padding:5px;
+        box-shadow:0 1px 5px rgba(0,0,0,.28)}
   header p{margin:4px 0 0;font-size:13px;opacity:.85}
   main{max-width:1080px;margin:0 auto;padding:20px;display:grid;gap:18px;grid-template-columns:1fr 1fr}
   @media (max-width:860px){main{grid-template-columns:1fr}}
@@ -106,14 +112,19 @@
     .only-wide{display:none} .only-narrow{display:inline}
     summary .hint{display:none}         /* «— один раз на каждом устройстве» переносилось второй строкой */
     header p{font-size:12px}
+    header{gap:11px}
+    .logo{width:42px;height:42px;border-radius:11px;padding:4px}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>Расчет коммерческого предложения</h1>
-  <p><span class="only-wide">Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.</span><span class="only-narrow">Отправьте задание — готовый результат ниже.</span>
-     <span style="opacity:.6">· версия 5.8 (25.07.2026)</span></p>
+  <img class="logo" src="icons/icon-192.png" alt="ВИТАПРОМ" width="192" height="192">
+  <div class="hgroup">
+    <h1>Расчет коммерческого предложения</h1>
+    <p><span class="only-wide">Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.</span><span class="only-narrow">Отправьте задание — готовый результат ниже.</span>
+       <span style="opacity:.6">· версия 5.9 (25.07.2026)</span></p>
+  </div>
 </header>
 
 <main>
