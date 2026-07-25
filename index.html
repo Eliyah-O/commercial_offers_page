@@ -58,7 +58,7 @@
 <header>
   <h1>Расчет коммерческого предложения</h1>
   <p>Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.
-     <span style="opacity:.6">· версия 5.2 (25.07.2026): звонки — номер + сайт отдельно</span></p>
+     <span style="opacity:.6">· версия 5.3 (25.07.2026): 145 сайтов из справочника</span></p>
 </header>
 
 <main>
@@ -142,9 +142,8 @@
         </div>
         <div style="flex:1;min-width:160px">
           <label>Сайт, где клиент нашёл информацию</label>
-          <select id="cSite" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff">
-            <option value="">— не знаю —</option>
-          </select>
+          <input type="text" id="cSite" list="siteList" placeholder="начните печатать: kotelki…">
+          <datalist id="siteList"></datalist>
         </div>
       </div>
     </div>
@@ -205,35 +204,187 @@ const $ = id => document.getElementById(id);
 const TASKS = 'tasks', RESULTS = 'results';
 let queue = [];
 
-/* ---------- номера и их сайты (источник заявки по звонку) ----------
-   Источник данных: _исходные_данные_общие/Сотрудники/сайты_телефоны.xlsx (25.07.2026).
-   Уникальный номер → конкретный сайт; номер колл-центра стоит на многих сайтах —
-   тогда источник определяется с точностью до группы. Менять СИНХРОННО с файлом. */
+/* ---------- сайты и номера (источник заявки по звонку) ----------
+   Источник: _исходные_данные_общие/Сотрудники/сайты_телефоны.xlsx (обновлён 25.07.2026):
+   145 рабочих сайтов, 20 наших номеров. Исключены нерабочие/заглушки, зарубежные домены
+   и boilers24 (правило проекта). ФИО сотрудников здесь НЕТ намеренно — страница публична.
+   ⚠ Номер колл-центра стоит на 113 сайтах → по нему источник НЕ определить, поэтому сайт
+   всегда выбирается отдельным полем; автоподстановка работает для 8 уникальных номеров. */
+const SITES = [
+  '161siemens.ru',
+  '16tat.ru',
+  '21600.ru',
+  '3d.vitaprom.ru',
+  '6003617.ru',
+  '7489206.ru',
+  'acv.kotelki.ru',
+  'allanson.ru',
+  'aluheat.ru',
+  'ametek.su',
+  'anstoss.ru',
+  'anurin.ru',
+  'arcotherm.ru',
+  'auburn.su',
+  'baltu.ru',
+  'beckett.ru',
+  'bekaert.su',
+  'bekaert.vitaprom.ru',
+  'bergerlahr.ru',
+  'bergerlahr.vitaprom.ru',
+  'bergonzo.ru',
+  'bertelli.ru',
+  'bertelli.vitaprom.ru',
+  'beru-russia.ru',
+  'berurussia.ru',
+  'bfp21.ru',
+  'bitron.kotelki.ru',
+  'bloomeng.ru',
+  'borgvarner.ru',
+  'brahma.su',
+  'burners.viteprom.ru',
+  'caem.su',
+  'castfutura.ru',
+  'ceme.su',
+  'cibital.su',
+  'cofi.su',
+  'cofi.vitaprom.ru',
+  'condition.viteprom.ru',
+  'danfos.su',
+  'dejatech.ru',
+  'delavan.ru',
+  'diematic.ru',
+  'dungs.vitaprom.ru',
+  'dungs.vsegorelki.ru',
+  'durag.su',
+  'ekoflam.ru',
+  'electro.viteprom.ru',
+  'ermaf.ru',
+  'ermaf.su',
+  'exothermics.ru',
+  'f.vitaprom.ru',
+  'f1.vsegorelki.ru',
+  'fema.su',
+  'fi.vsegorelki.ru',
+  'fida.su',
+  'fluidics.ru',
+  'forsunki.info',
+  'fr124.ru',
+  'g1g170.ru',
+  'girsch.ru',
+  'gorelki.info',
+  'gruppogiordano.ru',
+  'hago.su',
+  'hauck.su',
+  'herculine.ru',
+  'honeyvell.ru',
+  'hptechnik.ru',
+  'huba.su',
+  'hwl.vitaprom.ru',
+  'imit.su',
+  'iris550.ru',
+  'itegra.org',
+  'kotelki.ru',
+  'kpi35.ru',
+  'kroll.vsegorelki.ru',
+  'krom.vitaprom.ru',
+  'kromshroder.ru',
+  'l4064.ru',
+  'lamborghini.vsegorelki.ru',
+  'lamtec.vitaprom.ru',
+  'lg1093.ru',
+  'master.viteprom.ru',
+  'maxon.su',
+  'meku.vsegorelki.ru',
+  'mertik.ru',
+  'natalini.ru',
+  'nautilair.ru',
+  'nordgas.kotelki.ru',
+  'okazaki.ru',
+  'old.diematic.ru',
+  'old.kotelki.ru',
+  'old.zapal.su',
+  'onaysan.ru',
+  'orkli.su',
+  'polidoro.su',
+  'polidoro.vitaprom.ru',
+  'pucada.ru',
+  'rapa.su',
+  'riello.vsegorelki.ru',
+  'rielo.ru',
+  'robertshaw.ru',
+  'safag.ru',
+  'sapco.su',
+  'sargi.ru',
+  'satronic.su',
+  'satronik.ru',
+  'scaldalai.ru',
+  'schimpf.ru',
+  'schimpf.vitaprom.ru',
+  'sermeta.ru',
+  'sermeta.vitaprom.ru',
+  'shineui.ru',
+  'shop.rielo.ru',
+  'shop.vitaprom.ru',
+  'sial.su',
+  'sibsiber.ru',
+  'siemens.vitaprom.ru',
+  'siemens.vsegorelki.ru',
+  'silvanya.ru',
+  'sitsit.ru',
+  'slate.vitaprom.ru',
+  'spares.rielo.ru',
+  'steinen.ru',
+  'suntec.su',
+  'svalka.org',
+  'tecflam.ru',
+  'techno.viteprom.ru',
+  'teplo.viteprom.ru',
+  'trochoid.ru',
+  'ved-gorelka.ru',
+  'viessmann.kotelki.ru',
+  'vitagas.ru',
+  'vitagaz.ru',
+  'vitaprom.info',
+  'vitaprom.ru',
+  'viteprom.ru',
+  'vitoprom.ru',
+  'vsegorelki.ru',
+  'winkelmann.ru',
+  'worgas.ru',
+  'worgas.vitaprom.ru',
+  'zapal.su',
+  'zima911.ru',
+  'запчасти.ремонткотла.рф',
+  'ремонткотла.рф'
+];
 const PHONES = [
-  {phone:'+7 499 677-2407', sites:['shop.vitaprom.ru']},
-  {phone:'+7 925 542-3433', sites:['shop.vitaprom.ru','sitsit.ru','satronik.ru','gorelki.info','honeyvell.ru','imit.su','acv.kotelki.ru','fi.vsegorelki.ru']},
-  {phone:'+7 916 972-2758', sites:['shop.vitaprom.ru']},
-  {phone:'+7 926 341-0000', sites:['acv.kotelki.ru','sitsit.ru','запчасти.ремонткотла.рф']},
-  {phone:'+7 903 663-5887', sites:['kromshroder.ru','satronik.ru','vsegorelki.ru','viteprom.ru','zima911.ru']},
-  {phone:'+7 925 510-8151', sites:['beckett.ru','ermaf.ru','polidoro.su','sibsiber.ru','trochoid.ru']},
-  {phone:'+7 495 510-8151', sites:['vitaprom.ru','itegra.org']},
-  {phone:'+7 495 748-9206', sites:['brahma.su','polidoro.su','svalka.org']},
-  {phone:'+7 812 922-4493', sites:['ekoflam.ru','old.zapal.su']},
-  {phone:'+7 966 240-4386', sites:['16tat.ru']},
-  {phone:'+7 968 441-6199', sites:['anurin.ru']},
-  {phone:'+7 901 760-0032', sites:['delavan.ru']},
-  {phone:'+7 925 605-8744', sites:['ved-gorelka.ru']},
-  {phone:'+7 977 634-7788', sites:['zapal.su']},
-  {phone:'+7 977 377-1587', sites:['ремонткотла.рф']},
-  {phone:'+7 985 539-6968', sites:['svalka.org']},
+  {p:'+7 925 542-3433', s:['161siemens.ru','21600.ru','6003617.ru','7489206.ru','acv.kotelki.ru','allanson.ru','aluheat.ru','anstoss.ru','arcotherm.ru','auburn.su','baltu.ru','beckett.ru','bekaert.su','bekaert.vitaprom.ru','bergerlahr.ru','bergerlahr.vitaprom.ru','bergonzo.ru','bertelli.ru','bertelli.vitaprom.ru','beru-russia.ru','berurussia.ru','bfp21.ru','bitron.kotelki.ru','bloomeng.ru','borgvarner.ru','burners.viteprom.ru','caem.su','castfutura.ru','cibital.su','cofi.su','cofi.vitaprom.ru','condition.viteprom.ru','danfos.su','dejatech.ru','dungs.vitaprom.ru','dungs.vsegorelki.ru','electro.viteprom.ru','ermaf.ru','ermaf.su','exothermics.ru','f.vitaprom.ru','f1.vsegorelki.ru','fema.su','fi.vsegorelki.ru','fida.su','fluidics.ru','forsunki.info','g1g170.ru','gorelki.info','gruppogiordano.ru','hago.su','hauck.su','herculine.ru','honeyvell.ru','hptechnik.ru','huba.su','hwl.vitaprom.ru','imit.su','iris550.ru','kpi35.ru','kroll.vsegorelki.ru','krom.vitaprom.ru','kromshroder.ru','l4064.ru','lamborghini.vsegorelki.ru','lg1093.ru','master.viteprom.ru','meku.vsegorelki.ru','mertik.ru','natalini.ru','nordgas.kotelki.ru','okazaki.ru','old.diematic.ru','old.kotelki.ru','onaysan.ru','orkli.su','polidoro.su','polidoro.vitaprom.ru','pucada.ru','riello.vsegorelki.ru','robertshaw.ru','safag.ru','sargi.ru','satronic.su','satronik.ru','scaldalai.ru','schimpf.ru','schimpf.vitaprom.ru','sermeta.ru','sermeta.vitaprom.ru','shineui.ru','shop.rielo.ru','shop.vitaprom.ru','sial.su','sibsiber.ru','silvanya.ru','sitsit.ru','slate.vitaprom.ru','spares.rielo.ru','steinen.ru','suntec.su','tecflam.ru','techno.viteprom.ru','teplo.viteprom.ru','trochoid.ru','viessmann.kotelki.ru','viteprom.ru','vitoprom.ru','vsegorelki.ru','winkelmann.ru','worgas.ru','worgas.vitaprom.ru','zima911.ru']},
+  {p:'+7 925 510-8151', s:['aluheat.ru','ametek.su','auburn.su','beckett.ru','bekaert.su','bekaert.vitaprom.ru','beru-russia.ru','berurussia.ru','bloomeng.ru','borgvarner.ru','castfutura.ru','condition.viteprom.ru','electro.viteprom.ru','ermaf.ru','ermaf.su','exothermics.ru','f.vitaprom.ru','hauck.su','herculine.ru','iris550.ru','lg1093.ru','mertik.ru','natalini.ru','nautilair.ru','okazaki.ru','onaysan.ru','orkli.su','polidoro.su','polidoro.vitaprom.ru','pucada.ru','robertshaw.ru','sargi.ru','sermeta.ru','sermeta.vitaprom.ru','shineui.ru','sibsiber.ru','slate.vitaprom.ru','tecflam.ru','techno.viteprom.ru','trochoid.ru','worgas.ru','worgas.vitaprom.ru']},
+  {p:'+7 926 341-0000', s:['acv.kotelki.ru','anstoss.ru','bertelli.ru','bertelli.vitaprom.ru','bitron.kotelki.ru','diematic.ru','g1g170.ru','nordgas.kotelki.ru','old.diematic.ru','riello.vsegorelki.ru','shop.rielo.ru','sitsit.ru','spares.rielo.ru','viessmann.kotelki.ru','winkelmann.ru','запчасти.ремонткотла.рф']},
+  {p:'+7 499 677-2407', s:['7489206.ru','caem.su','dejatech.ru','gruppogiordano.ru','kotelki.ru','lamtec.vitaprom.ru','old.kotelki.ru','shop.vitaprom.ru','silvanya.ru','svalka.org','vitagas.ru','vitagaz.ru','vitaprom.ru','vitoprom.ru']},
+  {p:'+7 903 663-5887', s:['arcotherm.ru','krom.vitaprom.ru','kromshroder.ru','master.viteprom.ru','safag.ru','satronic.su','satronik.ru','sial.su','steinen.ru','teplo.viteprom.ru','viteprom.ru','vsegorelki.ru','zima911.ru']},
+  {p:'+7 495 748-9206', s:['21600.ru','brahma.su','girsch.ru','old.zapal.su','polidoro.su','polidoro.vitaprom.ru','siemens.vitaprom.ru','siemens.vsegorelki.ru','svalka.org']},
+  {p:'+7 916 972-2758', s:['7489206.ru','caem.su','dejatech.ru','gruppogiordano.ru','old.kotelki.ru','shop.vitaprom.ru','silvanya.ru','vitoprom.ru']},
+  {p:'+7 495 510-8151', s:['3d.vitaprom.ru','itegra.org','maxon.su','sapco.su','vitaprom.info','vitaprom.ru']},
+  {p:'+7 495 600-3617', s:['3d.vitaprom.ru','durag.su','ekoflam.ru','hago.su','rielo.ru','svalka.org']},
+  {p:'+7 843 240-4386', s:['ekoflam.ru','old.zapal.su','techno.viteprom.ru']},
+  {p:'+7 926 400-7400', s:['ceme.su','rapa.su']},
+  {p:'+7 812 922-4493', s:['ekoflam.ru','old.zapal.su']},
+  {p:'+7 966 240-4386', s:['16tat.ru']},
+  {p:'+7 495 542-3433', s:['21600.ru']},
+  {p:'+7 968 441-6199', s:['anurin.ru']},
+  {p:'+7 901 760-0032', s:['delavan.ru']},
+  {p:'+7 965 353-9050', s:['fr124.ru']},
+  {p:'+7 925 605-8744', s:['ved-gorelka.ru']},
+  {p:'+7 977 634-7788', s:['zapal.su']},
+  {p:'+7 977 377-1587', s:['ремонткотла.рф']}
 ];
 (function fillSites(){
-  const sel = $('cSite');
-  const all = [...new Set(PHONES.flatMap(p => p.sites))].sort();
-  all.forEach(s => {
+  const dl = $('siteList');
+  SITES.forEach(s => {
     const o = document.createElement('option');
-    o.value = s; o.textContent = s;
-    sel.appendChild(o);
+    o.value = s;
+    dl.appendChild(o);
   });
 })();
 /* подсказка по введённому номеру: уникальный → сайт подставляется сам */
@@ -243,13 +394,15 @@ $('cOurPhone').addEventListener('input', () => {
   const hint = $('phoneHint');
   hint.textContent = '';
   if(d.length < 10) return;
-  const m = PHONES.find(p => digits(p.phone) === d);
-  if(!m){ hint.textContent = '⚠ Номер не из справочника сайтов'; return; }
-  if(m.sites.length === 1){
-    $('cSite').value = m.sites[0];
-    hint.textContent = '✓ сайт определён по номеру: ' + m.sites[0];
+  const m = PHONES.find(x => digits(x.p) === d);
+  if(!m){ hint.textContent = '\u26a0 Номера нет в справочнике сайтов'; return; }
+  if(m.s.length === 1){
+    $('cSite').value = m.s[0];
+    hint.textContent = '\u2713 сайт определён по номеру: ' + m.s[0];
+  }else if(m.s.length <= 6){
+    hint.textContent = 'Номер стоит на сайтах: ' + m.s.join(', ') + ' — выберите нужный';
   }else{
-    hint.textContent = 'Номер стоит на сайтах: ' + m.sites.join(', ') + ' — выберите нужный';
+    hint.textContent = `Общий номер (${m.s.length} сайтов) — сайт укажите вручную`;
   }
 });
 
