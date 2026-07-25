@@ -58,7 +58,7 @@
 <header>
   <h1>Расчет коммерческого предложения</h1>
   <p>Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.
-     <span style="opacity:.6">· версия 5.1 (25.07.2026): звонки + реальные номера сайтов</span></p>
+     <span style="opacity:.6">· версия 5.2 (25.07.2026): звонки — номер + сайт отдельно</span></p>
 </header>
 
 <main>
@@ -133,8 +133,15 @@
             <option>E-mail</option>
           </select>
         </div>
+      </div>
+      <div class="row">
         <div style="flex:1;min-width:160px">
-          <label>На какой номер позвонили (= сайт-источник)</label>
+          <label>На какой НАШ номер позвонил клиент</label>
+          <input type="text" id="cOurPhone" placeholder="+7 …">
+          <p class="hint" id="phoneHint" style="margin:4px 0 0"></p>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label>Сайт, где клиент нашёл информацию</label>
           <select id="cSite" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff">
             <option value="">— не знаю —</option>
           </select>
@@ -202,33 +209,49 @@ let queue = [];
    Источник данных: _исходные_данные_общие/Сотрудники/сайты_телефоны.xlsx (25.07.2026).
    Уникальный номер → конкретный сайт; номер колл-центра стоит на многих сайтах —
    тогда источник определяется с точностью до группы. Менять СИНХРОННО с файлом. */
-const SITES = [
-  {phone:'+7 499 677-2407', label:'shop.vitaprom.ru (основной)'},
-  {phone:'+7 925 542-3433', label:'колл-центр WA/TG: shop.vitaprom.ru, sitsit.ru, satronik.ru, gorelki.info, honeyvell.ru, imit.su, acv.kotelki.ru, fi.vsegorelki.ru'},
-  {phone:'+7 916 972-2758', label:'shop.vitaprom.ru (кнопка MAX)'},
-  {phone:'+7 926 341-0000', label:'Пилипенко: acv.kotelki.ru, sitsit.ru, запчасти.ремонткотла.рф'},
-  {phone:'+7 903 663-5887', label:'Лелякин: kromshroder.ru, satronik.ru, vsegorelki.ru, viteprom.ru, zima911.ru'},
-  {phone:'+7 925 510-8151', label:'Родионов: beckett.ru, ermaf.ru, polidoro.su, sibsiber.ru, trochoid.ru'},
-  {phone:'+7 495 510-8151', label:'vitaprom.ru, itegra.org'},
-  {phone:'+7 495 748-9206', label:'brahma.su, polidoro.su, svalka.org'},
-  {phone:'+7 812 922-4493', label:'ekoflam.ru, old.zapal.su'},
-  {phone:'+7 966 240-4386', label:'16tat.ru'},
-  {phone:'+7 968 441-6199', label:'anurin.ru'},
-  {phone:'+7 901 760-0032', label:'delavan.ru'},
-  {phone:'+7 925 605-8744', label:'ved-gorelka.ru'},
-  {phone:'+7 977 634-7788', label:'zapal.su'},
-  {phone:'+7 977 377-1587', label:'ремонткотла.рф'},
-  {phone:'+7 985 539-6968', label:'svalka.org (3D-печать)'},
+const PHONES = [
+  {phone:'+7 499 677-2407', sites:['shop.vitaprom.ru']},
+  {phone:'+7 925 542-3433', sites:['shop.vitaprom.ru','sitsit.ru','satronik.ru','gorelki.info','honeyvell.ru','imit.su','acv.kotelki.ru','fi.vsegorelki.ru']},
+  {phone:'+7 916 972-2758', sites:['shop.vitaprom.ru']},
+  {phone:'+7 926 341-0000', sites:['acv.kotelki.ru','sitsit.ru','запчасти.ремонткотла.рф']},
+  {phone:'+7 903 663-5887', sites:['kromshroder.ru','satronik.ru','vsegorelki.ru','viteprom.ru','zima911.ru']},
+  {phone:'+7 925 510-8151', sites:['beckett.ru','ermaf.ru','polidoro.su','sibsiber.ru','trochoid.ru']},
+  {phone:'+7 495 510-8151', sites:['vitaprom.ru','itegra.org']},
+  {phone:'+7 495 748-9206', sites:['brahma.su','polidoro.su','svalka.org']},
+  {phone:'+7 812 922-4493', sites:['ekoflam.ru','old.zapal.su']},
+  {phone:'+7 966 240-4386', sites:['16tat.ru']},
+  {phone:'+7 968 441-6199', sites:['anurin.ru']},
+  {phone:'+7 901 760-0032', sites:['delavan.ru']},
+  {phone:'+7 925 605-8744', sites:['ved-gorelka.ru']},
+  {phone:'+7 977 634-7788', sites:['zapal.su']},
+  {phone:'+7 977 377-1587', sites:['ремонткотла.рф']},
+  {phone:'+7 985 539-6968', sites:['svalka.org']},
 ];
 (function fillSites(){
   const sel = $('cSite');
-  SITES.forEach(s => {
+  const all = [...new Set(PHONES.flatMap(p => p.sites))].sort();
+  all.forEach(s => {
     const o = document.createElement('option');
-    o.value = `${s.phone} (${s.label})`;
-    o.textContent = `${s.phone} — ${s.label}`;
+    o.value = s; o.textContent = s;
     sel.appendChild(o);
   });
 })();
+/* подсказка по введённому номеру: уникальный → сайт подставляется сам */
+const digits = s => (s||'').replace(/\D/g,'').replace(/^8/,'7');
+$('cOurPhone').addEventListener('input', () => {
+  const d = digits($('cOurPhone').value);
+  const hint = $('phoneHint');
+  hint.textContent = '';
+  if(d.length < 10) return;
+  const m = PHONES.find(p => digits(p.phone) === d);
+  if(!m){ hint.textContent = '⚠ Номер не из справочника сайтов'; return; }
+  if(m.sites.length === 1){
+    $('cSite').value = m.sites[0];
+    hint.textContent = '✓ сайт определён по номеру: ' + m.sites[0];
+  }else{
+    hint.textContent = 'Номер стоит на сайтах: ' + m.sites.join(', ') + ' — выберите нужный';
+  }
+});
 
 /* переключатель «откуда заявка» */
 document.querySelectorAll('input[name=src]').forEach(r => r.onchange = () => {
@@ -393,7 +416,8 @@ $('send').onclick = async () => {
         'Телефон: '  + $('cPhone').value.trim(),
         'E-mail: '   + ($('cEmail').value.trim()   || '—'),
         'Куда отвечать: ' + ($('cReply').value     || '—'),
-        'Позвонили на номер (сайт-источник): ' + ($('cSite').value || 'не знаю'),
+        'Позвонили на наш номер: ' + ($('cOurPhone').value.trim() || 'не указан'),
+        'Сайт-источник: ' + ($('cSite').value || 'не знаю'),
         '---'
       ].join('\n');
       payload = head + '\n' + text;
@@ -403,7 +427,7 @@ $('send').onclick = async () => {
     for(const f of queue){ await putFile(`${dir}/${safe(f.name)}`, await b64(f), 'Задание: ' + f.name); n++; }
     msg('sendMsg', `Отправлено (${n} файл(ов)) в ${dir}. Claude заберёт задание при следующей проверке.`, 'ok');
     $('text').value = ''; queue = []; renderFiles();
-    if(isCall){ ['cName','cCompany','cPhone','cEmail'].forEach(id => $(id).value=''); $('cReply').value=''; $('cSite').value=''; }
+    if(isCall){ ['cName','cCompany','cPhone','cEmail','cOurPhone'].forEach(id => $(id).value=''); $('cReply').value=''; $('cSite').value=''; $('phoneHint').textContent=''; }
   }catch(e){ msg('sendMsg', e.message, 'err'); }
   $('send').disabled = false;
 };
