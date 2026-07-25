@@ -58,7 +58,7 @@
 <header>
   <h1>Расчет коммерческого предложения</h1>
   <p>Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.
-     <span style="opacity:.6">· версия 5 (25.07.2026): заявки со звонков</span></p>
+     <span style="opacity:.6">· версия 5.1 (25.07.2026): звонки + реальные номера сайтов</span></p>
 </header>
 
 <main>
@@ -198,21 +198,34 @@ const $ = id => document.getElementById(id);
 const TASKS = 'tasks', RESULTS = 'results';
 let queue = [];
 
-/* ---------- сайты и их номера (источник заявки по звонку) ----------
-   ⚠ ЗАПОЛНИТЬ реальными номерами (справочник: память/справочник_сайтов_номеров.csv
-   в проекте Подбор_запчастей). Выбор номера = однозначный сайт-источник. */
+/* ---------- номера и их сайты (источник заявки по звонку) ----------
+   Источник данных: _исходные_данные_общие/Сотрудники/сайты_телефоны.xlsx (25.07.2026).
+   Уникальный номер → конкретный сайт; номер колл-центра стоит на многих сайтах —
+   тогда источник определяется с точностью до группы. Менять СИНХРОННО с файлом. */
 const SITES = [
-  {site:'shop.vitaprom.ru', phone:'УТОЧНИТЬ'},
-  {site:'kotelki.ru',       phone:'УТОЧНИТЬ'},
-  {site:'vitaprom.ru',      phone:'УТОЧНИТЬ'},
-  {site:'advers.ru',        phone:'УТОЧНИТЬ'},
+  {phone:'+7 499 677-2407', label:'shop.vitaprom.ru (основной)'},
+  {phone:'+7 925 542-3433', label:'колл-центр WA/TG: shop.vitaprom.ru, sitsit.ru, satronik.ru, gorelki.info, honeyvell.ru, imit.su, acv.kotelki.ru, fi.vsegorelki.ru'},
+  {phone:'+7 916 972-2758', label:'shop.vitaprom.ru (кнопка MAX)'},
+  {phone:'+7 926 341-0000', label:'Пилипенко: acv.kotelki.ru, sitsit.ru, запчасти.ремонткотла.рф'},
+  {phone:'+7 903 663-5887', label:'Лелякин: kromshroder.ru, satronik.ru, vsegorelki.ru, viteprom.ru, zima911.ru'},
+  {phone:'+7 925 510-8151', label:'Родионов: beckett.ru, ermaf.ru, polidoro.su, sibsiber.ru, trochoid.ru'},
+  {phone:'+7 495 510-8151', label:'vitaprom.ru, itegra.org'},
+  {phone:'+7 495 748-9206', label:'brahma.su, polidoro.su, svalka.org'},
+  {phone:'+7 812 922-4493', label:'ekoflam.ru, old.zapal.su'},
+  {phone:'+7 966 240-4386', label:'16tat.ru'},
+  {phone:'+7 968 441-6199', label:'anurin.ru'},
+  {phone:'+7 901 760-0032', label:'delavan.ru'},
+  {phone:'+7 925 605-8744', label:'ved-gorelka.ru'},
+  {phone:'+7 977 634-7788', label:'zapal.su'},
+  {phone:'+7 977 377-1587', label:'ремонткотла.рф'},
+  {phone:'+7 985 539-6968', label:'svalka.org (3D-печать)'},
 ];
 (function fillSites(){
   const sel = $('cSite');
   SITES.forEach(s => {
     const o = document.createElement('option');
-    o.value = s.site;
-    o.textContent = s.phone === 'УТОЧНИТЬ' ? s.site : `${s.phone} — ${s.site}`;
+    o.value = `${s.phone} (${s.label})`;
+    o.textContent = `${s.phone} — ${s.label}`;
     sel.appendChild(o);
   });
 })();
