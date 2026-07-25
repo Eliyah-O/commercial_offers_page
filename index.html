@@ -26,8 +26,10 @@
   .card h2{margin:0 0 12px;font-size:16px}
   .full{grid-column:1/-1}
   label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
-  input[type=text],input[type=password],textarea{
-    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff}
+  input[type=text],input[type=password],textarea,select{
+    width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff;
+    /* 16px — иначе iOS Safari при фокусе на поле зумит всю страницу */
+    font-size:16px}
   textarea{min-height:120px;resize:vertical}
   button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:10px 16px;
          font:inherit;font-weight:600;cursor:pointer}
@@ -52,43 +54,82 @@
   .hint{font-size:12px;color:var(--mut);margin-top:6px}
   .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:99px;background:#eef1f5;color:var(--mut)}
   details{margin-top:10px} summary{cursor:pointer;font-size:13px;color:var(--mut)}
+
+  /* ================= ТЕЛЕФОН (адаптация 25.07.2026) =================
+     Цели: ничего не уезжает за край, поля и кнопки удобно нажимать пальцем,
+     iOS не зумит страницу при фокусе, длинные имена файлов/домены переносятся. */
+  html{-webkit-text-size-adjust:100%}      /* Safari не «улучшает» размер шрифта сам */
+  @media (max-width:640px){
+    body{font-size:16px}
+    header{padding:14px 14px}
+    header h1{font-size:17px}
+    main{padding:12px;gap:12px}
+    .card{padding:13px;border-radius:9px}
+    .card h2{font-size:15px;margin-bottom:10px}
+    /* поля в строке — друг под другом, а не в два сжатых столбца */
+    .row{flex-direction:column;align-items:stretch;gap:0}
+    .row > div{width:100%;min-width:0 !important}
+    /* кнопки: во всю ширину, палец попадает уверенно (44px — минимум Apple HIG) */
+    .row button, button{width:100%;min-height:46px;padding:12px 16px}
+    /* строка радиокнопок «откуда заявка» — оставить в ряд, они компактные */
+    .row.radios{flex-direction:row;gap:14px;align-items:center}
+    .row.radios label{width:auto;display:flex;align-items:center;gap:6px;min-height:34px}
+    .row.radios input{width:auto;min-height:0}
+    /* кнопки настройки — в ряд по две, чтобы не занимать три экрана */
+    .row.btns{flex-direction:row;flex-wrap:wrap;gap:8px}
+    .row.btns button{width:auto;flex:1 1 40%}
+    .drop{padding:16px 12px}
+    textarea{min-height:110px}
+    .files li{flex-wrap:wrap}
+    .files li span{word-break:break-word;min-width:0}
+    .files .x{padding:4px 8px}          /* увеличенная зона нажатия «✕» */
+    table{font-size:13px}
+    th,td{padding:8px 4px}
+    td{word-break:break-word}
+    .tag{display:none}                  /* мелкие подписи-плашки на телефоне лишние */
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>Расчет коммерческого предложения</h1>
   <p>Слева отправляете задание (текст, фото, PDF). Справа забираете готовый результат.
-     <span style="opacity:.6">· версия 5.4 (25.07.2026): + MAX в «куда отвечать»</span></p>
+     <span style="opacity:.6">· версия 5.5 (25.07.2026): адаптация под телефон</span></p>
 </header>
 
 <main>
-  <!-- ---------------- НАСТРОЙКА ---------------- -->
+  <!-- ---------------- НАСТРОЙКА ----------------
+       Свёрнута: настраивается один раз на устройстве, а на телефоне занимала весь
+       первый экран и отодвигала главное — отправку задания (адаптация 25.07.2026). -->
   <section class="card full">
-    <h2>Настройка <span class="tag">один раз на каждом устройстве</span></h2>
-    <div class="row">
-      <div style="flex:1;min-width:180px">
-        <label>Владелец репозитория (логин GitHub)</label>
-        <input type="text" id="owner" placeholder="например ilaorlov">
+    <details id="cfgBox">
+      <summary style="font-size:16px;font-weight:600;color:var(--ink)">Настройка подключения
+        <span class="hint" style="font-weight:400">— один раз на каждом устройстве</span></summary>
+      <div class="row">
+        <div style="flex:1;min-width:180px">
+          <label>Владелец репозитория (логин GitHub)</label>
+          <input type="text" autocapitalize="off" autocomplete="off" spellcheck="false" id="owner" placeholder="например ilaorlov">
+        </div>
+        <div style="flex:1;min-width:180px">
+          <label>Репозиторий (приватный!)</label>
+          <input type="text" autocapitalize="off" autocomplete="off" spellcheck="false" id="repo" placeholder="например vitaprom-inbox">
+        </div>
+        <div style="flex:1;min-width:180px">
+          <label>Ветка</label>
+          <input type="text" id="branch" placeholder="main" value="main">
+        </div>
       </div>
-      <div style="flex:1;min-width:180px">
-        <label>Репозиторий (приватный!)</label>
-        <input type="text" id="repo" placeholder="например vitaprom-inbox">
+      <label>Токен GitHub (fine-grained, доступ Contents: Read and write только к этому репозиторию)</label>
+      <input type="password" id="token" placeholder="github_pat_...">
+      <div class="row btns" style="margin-top:10px">
+        <button id="save">Сохранить</button>
+        <button id="check" class="ghost">Проверить связь</button>
+        <button id="forget" class="ghost">Забыть токен</button>
       </div>
-      <div style="flex:1;min-width:180px">
-        <label>Ветка</label>
-        <input type="text" id="branch" placeholder="main" value="main">
-      </div>
-    </div>
-    <label>Токен GitHub (fine-grained, доступ Contents: Read and write только к этому репозиторию)</label>
-    <input type="password" id="token" placeholder="github_pat_...">
-    <div class="row" style="margin-top:10px">
-      <button id="save">Сохранить</button>
-      <button id="check" class="ghost">Проверить связь</button>
-      <button id="forget" class="ghost">Забыть токен</button>
-    </div>
-    <p class="hint">Токен хранится ТОЛЬКО в вашем браузере (localStorage) и никогда не попадает в репозиторий.
-       На чужом компьютере не сохраняйте — нажмите «Забыть токен» после работы.</p>
-    <div id="cfgMsg" class="msg"></div>
+      <p class="hint">Токен хранится ТОЛЬКО в вашем браузере (localStorage) и никогда не попадает в репозиторий.
+         На чужом компьютере не сохраняйте — нажмите «Забыть токен» после работы.</p>
+      <div id="cfgMsg" class="msg"></div>
+    </details>
   </section>
 
   <!-- ---------------- ОТПРАВКА ЗАДАНИЯ ---------------- -->
@@ -96,7 +137,7 @@
     <h2>1. Отправить задание</h2>
 
     <label>Откуда заявка</label>
-    <div class="row">
+    <div class="row radios">
       <label style="margin:0;color:var(--ink)"><input type="radio" name="src" value="почта" checked> Письмо / текст</label>
       <label style="margin:0;color:var(--ink)"><input type="radio" name="src" value="звонок"> Звонок / мессенджер</label>
     </div>
@@ -115,17 +156,17 @@
       <div class="row">
         <div style="flex:1;min-width:160px">
           <label>Телефон клиента <b style="color:var(--err)">*</b></label>
-          <input type="text" id="cPhone" placeholder="+7 …">
+          <input type="tel" inputmode="tel" autocomplete="off" id="cPhone" placeholder="+7 …">
         </div>
         <div style="flex:1;min-width:160px">
           <label>E-mail (если есть)</label>
-          <input type="text" id="cEmail" placeholder="client@mail.ru">
+          <input type="email" inputmode="email" autocapitalize="off" autocomplete="off" id="cEmail" placeholder="client@mail.ru">
         </div>
       </div>
       <div class="row">
         <div style="flex:1;min-width:160px">
           <label>Куда отвечать</label>
-          <select id="cReply" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:7px;font:inherit;background:#fff">
+          <select id="cReply">
             <option value="">— не выбрано —</option>
             <option>WhatsApp</option>
             <option>Telegram</option>
@@ -138,12 +179,12 @@
       <div class="row">
         <div style="flex:1;min-width:160px">
           <label>На какой НАШ номер позвонил клиент</label>
-          <input type="text" id="cOurPhone" placeholder="+7 …">
+          <input type="tel" inputmode="tel" autocomplete="off" id="cOurPhone" placeholder="+7 …">
           <p class="hint" id="phoneHint" style="margin:4px 0 0"></p>
         </div>
         <div style="flex:1;min-width:160px">
           <label>Сайт, где клиент нашёл информацию</label>
-          <input type="text" id="cSite" list="siteList" placeholder="начните печатать: kotelki…">
+          <input type="text" id="cSite" list="siteList" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="начните печатать: kotelki…">
           <datalist id="siteList"></datalist>
         </div>
       </div>
@@ -173,10 +214,11 @@
       <span class="hint" id="resHint"></span>
     </div>
     <div id="resMsg" class="msg"></div>
-    <table id="resTable" style="margin-top:10px">
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px">
+    <table id="resTable">
       <thead><tr><th>Файл</th><th style="width:90px">Размер</th><th style="width:110px"></th></tr></thead>
       <tbody id="resBody"><tr><td colspan="3" class="hint">Нажмите «Обновить список»</td></tr></tbody>
-    </table>
+      </table></div>
     <p class="hint">Сюда Claude кладёт ответы: текстовые письма и файлы Excel (папка <code>results/</code>).</p>
   </section>
 
