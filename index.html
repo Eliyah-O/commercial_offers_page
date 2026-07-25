@@ -132,7 +132,7 @@
   <img class="logo" src="icons/icon-192.png" alt="ВИТАПРОМ" width="192" height="192">
   <div class="hgroup">
     <h1>Расчет коммерческого предложения</h1>
-    <p><span style="opacity:.6">версия 6.3 (25.07.2026)</span></p>
+    <p><span style="opacity:.6">версия 6.4 (25.07.2026)</span></p>
   </div>
 </header>
 
@@ -249,14 +249,14 @@
   <section class="card">
     <h2>2. Получить предложение</h2>
     <div class="row">
-      <button id="refresh" class="ghost">Обновить список</button>
+      <button id="refresh">Получить предложение</button>
       <span class="hint" id="resHint"></span>
     </div>
     <div id="resMsg" class="msg"></div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px">
     <table id="resTable">
       <thead><tr><th>Файл</th><th style="width:90px">Размер</th><th style="width:110px"></th></tr></thead>
-      <tbody id="resBody"><tr><td colspan="3" class="hint">Нажмите «Обновить список»</td></tr></tbody>
+      <tbody id="resBody"><tr><td colspan="3" class="hint">Нажмите «Получить предложение»</td></tr></tbody>
       </table></div>
   </section>
 
@@ -267,8 +267,7 @@
         <b>Как пользоваться:</b> в блоке 1 отправляете задание — текст, фото, PDF. В блоке 2
         забираете готовый результат.<br><br>
         <b>Запрос обрабатывается в отделе продаж</b>, поэтому результат появляется не мгновенно:
-        после отправки задания нужно подождать, прежде чем нажимать «Обновить список» в блоке
-        «Получить предложение».<br><br>
+        после отправки задания нужно подождать, прежде чем нажимать кнопку «Получить предложение».<br><br>
         <b>Ограничение по файлам:</b> примерно 25 МБ на файл (ограничение GitHub).<br><br>
         Страница статическая — сама она ничего не хранит. Хранилище — приватный репозиторий GitHub:
         задания складываются в <code>tasks/</code>, результаты Claude кладёт в <code>results/</code>.
